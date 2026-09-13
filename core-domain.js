@@ -18,6 +18,12 @@ const MODES={
 };
 const LEVEL_ORDER=['beginner','level1','level2','level3','battle','war'];
 
+// Blocks uses a simple 1-times-table -> 9-times-table progression, then two random stages.
+const BLOCK_LEVEL_ORDER=[...Array.from({length:9},(_,i)=>`block${i+1}`),'blockRandom','blockMixed'];
+for(let n=1;n<=9;n++)MODES[`block${n}`]={name:`第 ${n} 關｜${n} 的乘法`,multipliers:[n],review:'不出加減法',blockReview:false};
+MODES.blockRandom={name:'第 10 關｜九九隨機',multipliers:[1,2,3,4,5,6,7,8,9],review:'不出加減法',blockReview:false};
+MODES.blockMixed={name:'最終關｜九九＋加減法',multipliers:[1,2,3,4,5,6,7,8,9],review:'兩個數皆 200 以內的加減法',blockReview:true};
+
 // Keep existing players' progress when the project branding changes from gundam -> robot.
 const storedBest=localStorage.robotMathBest??localStorage.gundamMathBest??'0';
 const storedMastery=localStorage.robotMathMastery??localStorage.gundamMathMastery??'{}';
@@ -25,5 +31,7 @@ const game={running:false,paused:false,sound:true,level:'beginner',stage:1,score
 function save(){localStorage.robotMathBest=String(game.best);localStorage.robotMathMastery=JSON.stringify(game.mastery)}
 function masteryCount(){let c=0;for(let a=1;a<=9;a++)for(let b=1;b<=9;b++)if((game.mastery[`${a}x${b}`]||0)>=2)c++;return c}
 function mode(){return MODES[game.level]}
+function isBlocksGame(){return window.GameVariant&&window.GameVariant.id==='blocks'}
+function levelOrder(){return isBlocksGame()?BLOCK_LEVEL_ORDER:LEVEL_ORDER}
 
 const Sound=(()=>{let ctx=null;function beep(f=440,d=.07,t='square',g=.022){if(!game.sound)return;try{ctx||=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),x=ctx.createGain();o.type=t;o.frequency.value=f;x.gain.value=g;o.connect(x);x.connect(ctx.destination);o.start();o.stop(ctx.currentTime+d)}catch{}}return{good(){beep(660);setTimeout(()=>beep(880,.09),65)},bad(){beep(180,.15,'sawtooth')},shot(enemy=false){beep(enemy?240:720,.06,enemy?'sawtooth':'square',.016)},next(){beep(420);setTimeout(()=>beep(540,.08),70)},tap(){beep(500,.05)}}})();
