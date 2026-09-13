@@ -1,5 +1,27 @@
+function setupBlocksSelection(){
+  if(!isBlocksGame())return;
+  const row=$('#startOverlay .select-row');
+  if(!row)return;
+  row.innerHTML='';
+  const levels=[
+    ...Array.from({length:9},(_,i)=>({id:`block${i+1}`,title:`第 ${i+1} 關｜${i+1} 的乘法`,detail:`${i+1}×1 ～ ${i+1}×9`})),
+    {id:'blockRandom',title:'第 10 關｜九九隨機',detail:'1×1 ～ 9×9 隨機出題，不含加減法'},
+    {id:'blockMixed',title:'最終關｜九九＋加減法',detail:'九九隨機，並穿插兩數皆 200 以內的加減法'}
+  ];
+  for(const [i,l] of levels.entries()){
+    const b=document.createElement('button');
+    b.dataset.level=l.id;b.className=i===0?'on':'';
+    b.innerHTML=`${l.title}<br><span class="small">${l.detail}</span>`;
+    row.appendChild(b);
+  }
+  game.level='block1';game.stage=1;
+}
+setupBlocksSelection();
+
 const scenes={duel:new DuelScene(),campaign:new CampaignScene(),war:new WarScene()};
-function currentScene(){return game.level==='war'?scenes.war:game.level==='battle'?scenes.campaign:scenes.duel}
+function isCampaignLevel(){return game.level==='battle'||game.level==='blockRandom'}
+function isWarLevel(){return game.level==='war'||game.level==='blockMixed'}
+function currentScene(){return isWarLevel()?scenes.war:isCampaignLevel()?scenes.campaign:scenes.duel}
 
 function resetSession(){AnswerReview.cancel();game.running=true;game.paused=false;game.score=0;game.combo=0;game.correctCount=0;game.round=0;game.question=null;game.phase='idle';CommonUI.update();$('#startOverlay').classList.add('hidden');$('#endOverlay').classList.add('hidden');currentScene().start()}
 function finish(victory,data={}){
@@ -20,14 +42,24 @@ function finish(victory,data={}){
     text.innerHTML=victory?`成功連續擊破 <b>5</b> 隻薩克。<br>本次答對 <b>${game.correctCount}</b> 題，得到 <b>${game.score}</b> 分。`:`本次已擊破 <b>${data.defeated||0} / 5</b> 隻薩克。<br>答對 <b>${game.correctCount}</b> 題。`;
     next.textContent='下一關（進入戰爭模式）';
   }else{
-    title.textContent=victory?'薩克擊破！':'整備後再出擊！';
+    title.textContent=victory?'任務完成！':'再挑戰一次！';
     text.innerHTML=`本次答對 <b>${game.correctCount}</b> 題，得到 <b>${game.score}</b> 分。<br>目前九九熟練度：<b>${masteryCount()} / 81</b>。`;
-    next.textContent='下一關';
+    const order=levelOrder(),i=order.indexOf(game.level);
+    next.textContent=isBlocksGame()&&i===order.length-1?'再玩一次最終關':'下一關';
   }
   $('#endOverlay').classList.remove('hidden');
 }
 function goSelection(){AnswerReview.cancel();game.running=false;game.paused=false;game.phase='idle';game.question=null;$('#endOverlay').classList.add('hidden');$('#tableOverlay').classList.add('hidden');$('#warQuestionOverlay').classList.remove('show');$('#startOverlay').classList.remove('hidden');syncLevelButtons();CommonUI.setMode('選關');CommonUI.update()}
-function nextLevel(){const i=LEVEL_ORDER.indexOf(game.level);if(game.level==='war'){game.stage++}else if(i>=0&&i<LEVEL_ORDER.length-1){game.level=LEVEL_ORDER[i+1];game.stage=1}else{game.level='war';game.stage++}syncLevelButtons();resetSession()}
+function nextLevel(){
+  const order=levelOrder(),i=order.indexOf(game.level);
+  if(isBlocksGame()){
+    if(i>=0&&i<order.length-1)game.level=order[i+1];
+    game.stage=1;
+  }else if(game.level==='war')game.stage++;
+  else if(i>=0&&i<order.length-1){game.level=order[i+1];game.stage=1}
+  else{game.level='war';game.stage++}
+  syncLevelButtons();resetSession();
+}
 function syncLevelButtons(){$$('[data-level]').forEach(b=>b.classList.toggle('on',b.dataset.level===game.level))}
 function renderTable(){const grid=$('#tableGrid');grid.innerHTML='';for(let a=1;a<=9;a++)for(let b=1;b<=9;b++){const d=document.createElement('div'),key=`${a}x${b}`,m=game.mastery[key]||0;d.className='table-cell'+(m>=2?' mastered':'')+(game.question?.key===key?' current':'');d.textContent=`${a}×${b}`;d.title=`${a} × ${b} = ${a*b}（答對 ${m} 次）`;grid.appendChild(d)}}
 
@@ -36,5 +68,5 @@ $('#startBtn').onclick=resetSession;$('#nextBtn').onclick=nextLevel;$('#backSele
 $('#tableBtn').onclick=()=>{renderTable();$('#tableOverlay').classList.remove('hidden')};$('#closeTable').onclick=()=>$('#tableOverlay').classList.add('hidden');
 $('#soundBtn').onclick=()=>{game.sound=!game.sound;$('#soundBtn').textContent='音效：'+(game.sound?'開':'關');if(game.sound)Sound.tap()};
 $('#resetBtn').onclick=()=>{if(confirm('要重新開始這一場嗎？九九熟練度會保留。'))resetSession()};
-window.addEventListener('keydown',e=>{if(['1','2','3','4'].includes(e.key)&&game.running&&!game.paused&&game.phase==='question'){const root=game.level==='war'?$('#warQuestionPanel'):game.level==='battle'?$('#campaignQuestionPanel'):$('#duelQuestionPanel');const b=root.querySelectorAll('.answer')[Number(e.key)-1];if(b&&!b.disabled)b.click()}});
+window.addEventListener('keydown',e=>{if(['1','2','3','4'].includes(e.key)&&game.running&&!game.paused&&game.phase==='question'){const root=isWarLevel()?$('#warQuestionPanel'):isCampaignLevel()?$('#campaignQuestionPanel'):$('#duelQuestionPanel');const b=root.querySelectorAll('.answer')[Number(e.key)-1];if(b&&!b.disabled)b.click()}});
 CommonUI.update();CommonUI.setMode('選關');renderTable();activateScene('duelScene');
