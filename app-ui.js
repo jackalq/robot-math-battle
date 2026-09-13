@@ -1,10 +1,9 @@
-function setupBlocksSelection(){
-  if(!isBlocksGame())return;
+function setupProgressionSelection(){
   const row=$('#startOverlay .select-row');
   if(!row)return;
   row.innerHTML='';
   const levels=[
-    ...Array.from({length:9},(_,i)=>({id:`block${i+1}`,title:`第 ${i+1} 關｜${i+1} 的乘法`,detail:`${i+1}×1 ～ ${i+1}×9`})),
+    ...Array.from({length:9},(_,i)=>({id:`block${i+1}`,title:`第 ${i+1} 關｜${i+1} 的乘法`,detail:`${i+1}×1 ～ ${i+1}×9，隨機出題`})),
     {id:'blockRandom',title:'第 10 關｜九九隨機',detail:'1×1 ～ 9×9 隨機出題，不含加減法'},
     {id:'blockMixed',title:'最終關｜九九＋加減法',detail:'九九隨機，並穿插兩數皆 200 以內的加減法'}
   ];
@@ -16,48 +15,28 @@ function setupBlocksSelection(){
   }
   game.level='block1';game.stage=1;
 }
-setupBlocksSelection();
+setupProgressionSelection();
 
 const scenes={duel:new DuelScene(),campaign:new CampaignScene(),war:new WarScene()};
-function isCampaignLevel(){return game.level==='battle'||game.level==='blockRandom'}
-function isWarLevel(){return game.level==='war'||game.level==='blockMixed'}
+function isCampaignLevel(){return game.level==='blockRandom'}
+function isWarLevel(){return game.level==='blockMixed'}
 function currentScene(){return isWarLevel()?scenes.war:isCampaignLevel()?scenes.campaign:scenes.duel}
 
 function resetSession(){AnswerReview.cancel();game.running=true;game.paused=false;game.score=0;game.combo=0;game.correctCount=0;game.round=0;game.question=null;game.phase='idle';CommonUI.update();$('#startOverlay').classList.add('hidden');$('#endOverlay').classList.add('hidden');currentScene().start()}
 function finish(victory,data={}){
   AnswerReview.cancel();game.running=false;game.phase='ended';game.question=null;
   const title=$('#endTitle'),text=$('#endText'),next=$('#nextBtn');
-  if(game.level==='war'){
-    const nextRank=game.stage+1;
-    if(victory){
-      title.textContent='戰爭任務勝利！';
-      text.innerHTML=`我方存活 <b>${data.alliesLeft} / 6</b> 台，敵軍 6 台全部擊破。<br>本關薩克強度 <b>Lv.${game.stage}</b>。下一關將提升到 <b>Lv.${nextRank}</b>。<br>本次答對 <b>${game.correctCount}</b> 題，得到 <b>${game.score}</b> 分。<br>九九熟練度：<b>${masteryCount()} / 81</b>。`;
-    }else{
-      title.textContent='玩家機撤退！';
-      text.innerHTML=`玩家鋼彈被擊破。本次已擊破 <b>${data.enemyDown||0} / 6</b> 隻薩克。<br>敵軍強度：<b>Lv.${game.stage}</b>。<br>答對 <b>${game.correctCount}</b> 題。九九熟練度：<b>${masteryCount()} / 81</b>。`;
-    }
-    next.textContent=`下一關（戰爭 ${game.stage+1}）`;
-  }else if(game.level==='battle'){
-    title.textContent=victory?'實戰任務完成！':'整備後再出擊！';
-    text.innerHTML=victory?`成功連續擊破 <b>5</b> 隻薩克。<br>本次答對 <b>${game.correctCount}</b> 題，得到 <b>${game.score}</b> 分。`:`本次已擊破 <b>${data.defeated||0} / 5</b> 隻薩克。<br>答對 <b>${game.correctCount}</b> 題。`;
-    next.textContent='下一關（進入戰爭模式）';
-  }else{
-    title.textContent=victory?'任務完成！':'再挑戰一次！';
-    text.innerHTML=`本次答對 <b>${game.correctCount}</b> 題，得到 <b>${game.score}</b> 分。<br>目前九九熟練度：<b>${masteryCount()} / 81</b>。`;
-    const order=levelOrder(),i=order.indexOf(game.level);
-    next.textContent=isBlocksGame()&&i===order.length-1?'再玩一次最終關':'下一關';
-  }
+  title.textContent=victory?'任務完成！':'再挑戰一次！';
+  text.innerHTML=`本次答對 <b>${game.correctCount}</b> 題，得到 <b>${game.score}</b> 分。<br>目前九九熟練度：<b>${masteryCount()} / 81</b>。`;
+  const order=levelOrder(),i=order.indexOf(game.level);
+  next.textContent=i===order.length-1?'再玩一次最終關':'下一關';
   $('#endOverlay').classList.remove('hidden');
 }
 function goSelection(){AnswerReview.cancel();game.running=false;game.paused=false;game.phase='idle';game.question=null;$('#endOverlay').classList.add('hidden');$('#tableOverlay').classList.add('hidden');$('#warQuestionOverlay').classList.remove('show');$('#startOverlay').classList.remove('hidden');syncLevelButtons();CommonUI.setMode('選關');CommonUI.update()}
 function nextLevel(){
   const order=levelOrder(),i=order.indexOf(game.level);
-  if(isBlocksGame()){
-    if(i>=0&&i<order.length-1)game.level=order[i+1];
-    game.stage=1;
-  }else if(game.level==='war')game.stage++;
-  else if(i>=0&&i<order.length-1){game.level=order[i+1];game.stage=1}
-  else{game.level='war';game.stage++}
+  if(i>=0&&i<order.length-1)game.level=order[i+1];
+  game.stage=1;
   syncLevelButtons();resetSession();
 }
 function syncLevelButtons(){$$('[data-level]').forEach(b=>b.classList.toggle('on',b.dataset.level===game.level))}
