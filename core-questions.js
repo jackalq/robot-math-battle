@@ -9,9 +9,8 @@ const QuestionService={
   },
   next(){
     game.round++;
-    // Mecha keeps the existing 4:1 multiplication/review mix. Blocks adds reviews only in its final mixed stage.
-    const reviewEnabled=isBlocksGame()?mode().blockReview!==false:true;
-    const isReview=reviewEnabled&&game.round%5===0;
+    // Stages 1-10 are multiplication-only. The final mixed stage adds one review around every five questions.
+    const isReview=mode().reviewEnabled===true&&game.round%5===0;
     if(isReview)return{...this.review(),isReview:true};
     const[a,b]=this.choosePair();
     return{type:'mul',a,b,answer:a*b,text:`${a} × ${b} = ?`,key:`${a}x${b}`,isReview:false};
