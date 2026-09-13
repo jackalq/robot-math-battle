@@ -7,6 +7,14 @@ const QuestionService={
     const hi=Math.max(a,b),lo=Math.min(a,b);
     return{type:'sub',a:hi,b:lo,answer:hi-lo,text:`${hi} − ${lo} = ?`};
   },
-  next(){game.round++;const isReview=game.round%5===0;if(isReview)return{...this.review(),isReview:true};const[a,b]=this.choosePair();return{type:'mul',a,b,answer:a*b,text:`${a} × ${b} = ?`,key:`${a}x${b}`,isReview:false}},
+  next(){
+    game.round++;
+    // Mecha keeps the existing 4:1 multiplication/review mix. Blocks adds reviews only in its final mixed stage.
+    const reviewEnabled=isBlocksGame()?mode().blockReview!==false:true;
+    const isReview=reviewEnabled&&game.round%5===0;
+    if(isReview)return{...this.review(),isReview:true};
+    const[a,b]=this.choosePair();
+    return{type:'mul',a,b,answer:a*b,text:`${a} × ${b} = ?`,key:`${a}x${b}`,isReview:false};
+  },
   choices(answer){const set=new Set([answer]),scale=answer>=300?100:answer>=100?30:answer>=30?12:6;let guard=0;while(set.size<4&&guard++<100){let d=rand(1,scale);if(Math.random()<.5)d=-d;let v=answer+d;if(v<0)v=answer+Math.abs(d);if(v>=0)set.add(v)}while(set.size<4)set.add(answer+set.size);return shuffle([...set])}
 };
